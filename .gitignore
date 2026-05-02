@@ -6,6 +6,8 @@
 !.env.example
 CLAUDE.md
 .mcp.json
+docs/context.md
+docs/handoff.md
 !.mcp.json.example
 *.pem
 *.key
