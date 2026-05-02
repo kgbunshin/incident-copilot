@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "sre_rag": {
+      "command": "/home/seneca/.venv-sre-rag/bin/python3",
+      "args": ["/home/seneca/Documents/incident-copilot/mcp_server/sre_rag_mcp.py"],
+      "env": {
+        "SRE_API_URL": "http://localhost:8080",
+        "SRE_API_KEY": "0ac580f9599c7fc9bcb4d2311f1bb713b056b54a481c94aa5890d945679f44d6"
+      }
+    }
+  }
+}
