@@ -27,6 +27,13 @@ def _parse_host(url: str) -> tuple[str, int]:
     return url, 8000
 
 
+def _distance_to_score(distance: float) -> float:
+    """Convert Chroma distance values into a bounded confidence-like score."""
+    if distance < 0:
+        return 0.0
+    return 1 / (1 + distance)
+
+
 async def get_collection():
     client = await get_client()
     return await client.get_or_create_collection(name=COLLECTION_NAME)
@@ -63,7 +70,7 @@ async def search(text: str, top_k: int = 5) -> list[dict]:
         hits.append({
             "text": doc,
             "source": meta.get("source", "unknown"),
-            "score": 1 - dist,  # cosine distance → similarity
+            "score": _distance_to_score(dist),
         })
     return hits
 

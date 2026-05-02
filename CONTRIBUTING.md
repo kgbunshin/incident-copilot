@@ -1,4 +1,4 @@
-# Contributing to SRE RAG System
+# Contributing to Incident Copilot
 
 Thank you for your interest in contributing! This document covers how to set up
 your local environment, project conventions, and how to submit changes.
@@ -22,7 +22,7 @@ your local environment, project conventions, and how to submit changes.
 ## 📁 Project Structure
 
 ```
-sre-rag/
+incident-copilot/
 ├── README.md
 ├── CONTRIBUTING.md              # this file
 ├── docker-compose.yml           # Ollama + ChromaDB + API
@@ -49,9 +49,6 @@ sre-rag/
 │   │   └── alertmanager.py      # Alertmanager alert payloads
 │   ├── chunker.py               # chunking strategy
 │   └── pipeline.py              # ingestion orchestration
-│
-├── crawler/                     # external data collection
-│   └── openclaw.py              # OpenClaw scraper (free tier)
 │
 ├── scripts/
 │   ├── setup.sh                 # initial server setup
@@ -83,8 +80,8 @@ sre-rag/
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/<user>/sre-rag.git
-cd sre-rag
+git clone https://github.com/kgbunshin/incident-copilot.git
+cd incident-copilot
 
 # 2. Configure environment
 cp .env.example .env
@@ -94,8 +91,8 @@ cp .env.example .env
 docker compose up -d
 
 # 4. Pull Ollama models
-docker exec -it sre-rag-ollama-1 ollama pull mistral:7b-instruct-q4_K_M
-docker exec -it sre-rag-ollama-1 ollama pull nomic-embed-text
+docker exec -it sre-rag-ollama ollama pull mistral:7b-instruct-q4_K_M
+docker exec -it sre-rag-ollama ollama pull nomic-embed-text
 
 # 5. Verify everything is running
 docker compose ps
@@ -155,14 +152,10 @@ chore: upgrade chromadb to 0.5.x
 
 ## 🌿 Branch Strategy
 
-```
-main   → stable, production-ready
-dev    → active development
-```
-
-- Always branch from `dev`
-- Open PRs against `dev`
-- Never push directly to `main`
+- `main` is the stable public branch.
+- Use short-lived feature branches for changes.
+- Open PRs when collaboration/review is useful.
+- Never commit local-only context or secret files.
 
 ---
 

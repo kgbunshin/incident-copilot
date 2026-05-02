@@ -1,6 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+if [[ -f .env ]]; then
+  set -a
+  # shellcheck disable=SC1091
+  source .env
+  set +a
+fi
+
 API_URL="${API_URL:-http://localhost:8080}"
 API_KEY="${API_SECRET_KEY:-}"
 
@@ -16,7 +23,10 @@ if [[ -z "$QUESTION" ]]; then
   exit 1
 fi
 
-curl -sf -X POST "${API_URL}/query" \
+payload="$(jq -n --arg question "$QUESTION" '{question: $question}')"
+response="$(curl -sf -X POST "${API_URL}/query" \
   -H "Content-Type: application/json" \
   -H "X-API-Key: ${API_KEY}" \
-  -d "{\"question\": \"${QUESTION}\"}" | jq -r '"Answer: \(.answer)\nSources: \(.sources | join(", "))\nConfidence: \(.confidence)"'
+  -d "$payload")"
+
+printf '%s\n' "$response" | jq -r '"Answer: \(.answer)\nSources: \(.sources | join(", "))\nConfidence: \(.confidence)"'

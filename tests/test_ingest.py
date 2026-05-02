@@ -72,6 +72,13 @@ def test_chunk_text_splits_long():
         assert len(chunk) <= 510  # small margin for boundary search
 
 
+def test_chunk_text_handles_tail_smaller_than_overlap():
+    text = "word " * 101  # final chunk is shorter than overlap
+    result = chunk_text(text, max_chars=500, overlap=50)
+    assert result[-1]
+    assert "".join(chunk.replace(" ", "") for chunk in result)
+
+
 @pytest.mark.asyncio
 async def test_ingest_bytes_markdown():
     content = b"# Runbook\n## Step One\nDo this and that to resolve the incident when things go wrong in production.\n## Step Two\nCheck metrics and logs for anomalies before escalating to on-call engineer."

@@ -20,7 +20,7 @@ BLOCKED_FILES=(
 )
 
 for f in "${BLOCKED_FILES[@]}"; do
-  if git diff --cached --name-only | grep -qF "$f"; then
+  if git diff --cached --name-only --diff-filter=ACMR | grep -qxF "$f"; then
     echo -e "${RED}[BLOCKED]${NC} Arquivo interno/secreto não pode ser commitado: $f"
     ERRORS=$((ERRORS + 1))
   fi
@@ -39,7 +39,7 @@ BLOCKED_PATTERNS=(
 )
 
 for pattern in "${BLOCKED_PATTERNS[@]}"; do
-  matches=$(git diff --cached --name-only | grep -iE "$pattern" || true)
+  matches=$(git diff --cached --name-only --diff-filter=ACMR | grep -vFx ".env.example" | grep -iE "$pattern" || true)
   if [[ -n "$matches" ]]; then
     echo -e "${RED}[BLOCKED]${NC} Arquivo com extensão sensível detectado: $matches"
     ERRORS=$((ERRORS + 1))
