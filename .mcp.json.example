@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "sre_rag": {
+      "command": "/home/<your-user>/.venv-sre-rag/bin/python3",
+      "args": ["/home/<your-user>/Documents/incident-copilot/mcp_server/sre_rag_mcp.py"],
+      "env": {
+        "SRE_API_URL": "http://localhost:8080",
+        "SRE_API_KEY": "<your-API_SECRET_KEY-from-.env>"
+      }
+    }
+  }
+}
