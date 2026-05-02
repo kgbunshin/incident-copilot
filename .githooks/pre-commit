@@ -1,0 +1,83 @@
+#!/usr/bin/env bash
+# Pre-commit hook — blocks secrets and internal context files from being committed.
+# Install: ./scripts/install-hooks.sh
+
+set -euo pipefail
+
+RED='\033[0;31m'
+YELLOW='\033[1;33m'
+NC='\033[0m'
+
+ERRORS=0
+
+# ── 1. Blocked filenames ──────────────────────────────────────────────────────
+BLOCKED_FILES=(
+  ".env"
+  ".mcp.json"
+  "CLAUDE.md"
+  "docs/context.md"
+  "docs/handoff.md"
+)
+
+for f in "${BLOCKED_FILES[@]}"; do
+  if git diff --cached --name-only | grep -qF "$f"; then
+    echo -e "${RED}[BLOCKED]${NC} Arquivo interno/secreto não pode ser commitado: $f"
+    ERRORS=$((ERRORS + 1))
+  fi
+done
+
+# ── 2. Blocked filename patterns ─────────────────────────────────────────────
+BLOCKED_PATTERNS=(
+  "\.env$"
+  "\.env\."
+  "\.pem$"
+  "\.key$"
+  "\.p12$"
+  "\.pfx$"
+  "_rsa$"
+  "_ed25519$"
+)
+
+for pattern in "${BLOCKED_PATTERNS[@]}"; do
+  matches=$(git diff --cached --name-only | grep -iE "$pattern" || true)
+  if [[ -n "$matches" ]]; then
+    echo -e "${RED}[BLOCKED]${NC} Arquivo com extensão sensível detectado: $matches"
+    ERRORS=$((ERRORS + 1))
+  fi
+done
+
+# ── 3. Secret patterns inside staged file contents ───────────────────────────
+# Only scan added lines (prefix "+") and skip the hook files themselves.
+added_lines=$(git diff --cached --unified=0 \
+  -- ':!.githooks/*' ':!scripts/install-hooks.sh' \
+  | grep "^+" | grep -v "^+++" || true)
+
+SECRET_PATTERNS=(
+  "API_SECRET_KEY\s*=\s*.+"
+  "-----BEGIN (RSA|EC|DSA|OPENSSH) PRIVATE KEY"
+  "(password|passwd|secret|token)\s*=\s*['\"][^'\"]{8,}"
+  "SRE_API_KEY.*[a-f0-9]{32,}"
+)
+
+for pattern in "${SECRET_PATTERNS[@]}"; do
+  if echo "$added_lines" | grep -qiP "$pattern" 2>/dev/null || \
+     echo "$added_lines" | grep -qiE "$pattern" 2>/dev/null; then
+    echo -e "${RED}[BLOCKED]${NC} Possível secret no conteúdo (padrão: ${pattern:0:40}...)"
+    ERRORS=$((ERRORS + 1))
+  fi
+done
+
+# ── 4. Warn on .claude/ directory ────────────────────────────────────────────
+if git diff --cached --name-only | grep -q "^\.claude/"; then
+  echo -e "${YELLOW}[WARN]${NC} Arquivos de .claude/ sendo commitados — verifique se não há secrets."
+fi
+
+# ── Result ────────────────────────────────────────────────────────────────────
+if [[ $ERRORS -gt 0 ]]; then
+  echo ""
+  echo -e "${RED}Commit bloqueado: $ERRORS problema(s) encontrado(s).${NC}"
+  echo "Remova os arquivos/conteúdos listados e tente novamente."
+  exit 1
+fi
+
+exit 0
