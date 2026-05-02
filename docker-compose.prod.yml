@@ -1,0 +1,45 @@
+services:
+  ollama:
+    image: ollama/ollama:latest
+    container_name: sre-rag-ollama
+    volumes:
+      - ollama_data:/root/.ollama
+    ports:
+      - "127.0.0.1:11434:11434"
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 6g
+
+  chromadb:
+    image: chromadb/chroma:latest
+    container_name: sre-rag-chroma
+    volumes:
+      - chroma_data:/chroma/chroma
+    ports:
+      - "127.0.0.1:8000:8000"
+    environment:
+      - IS_PERSISTENT=TRUE
+      - ANONYMIZED_TELEMETRY=FALSE
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sre-rag-api
+    ports:
+      - "${API_BIND_IP:-127.0.0.1}:${API_PORT:-8080}:8080"
+    env_file:
+      - .env
+    volumes:
+      - ./data:/data
+    depends_on:
+      - ollama
+      - chromadb
+    restart: unless-stopped
+
+volumes:
+  ollama_data:
+  chroma_data:
