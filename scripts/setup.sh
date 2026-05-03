@@ -81,12 +81,16 @@ done
 cat <<EOF
 
 Next steps:
-1. Edit ${APP_DIR}/.env and set API_BIND_IP to the VPS 2 private IP.
+1. Edit ${APP_DIR}/.env and set API_BIND_IP:
+   - private networking available: API_BIND_IP=<VPS2_PRIVATE_IP>
+   - public IP only: API_BIND_IP=0.0.0.0
 2. Restart the API:
    cd ${APP_DIR}
    docker compose -f ${COMPOSE_FILE} up -d api
-3. Allow port 8080 only from VPS 1 private IP, not from the public internet.
+3. Restrict port 8080 with UFW:
+   - private networking: allow only <VPS1_PRIVATE_IP>
+   - public IP only: allow only <VPS1_PUBLIC_IP>
 4. Test from VPS 1:
-   curl http://<VPS2-PRIVATE-IP>:8080/health
+   curl http://<VPS2_PRIVATE_OR_PUBLIC_IP>:8080/health
 
 EOF
