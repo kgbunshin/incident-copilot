@@ -1,0 +1,144 @@
+---
+- name: Setup VPS2 — incident-copilot stack
+  hosts: vps2
+  become: true
+
+  vars:
+    api_secret_key: "{{ lookup('env', 'API_SECRET_KEY') | default(lookup('password', '/dev/null length=64 chars=hexdigits'), true) }}"
+
+  tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: Install base packages
+      apt:
+        name: [git, curl, ca-certificates, gnupg, iptables-persistent, netfilter-persistent]
+        state: present
+
+    - name: Install Docker
+      shell: curl -fsSL https://get.docker.com | sh
+      args:
+        creates: /usr/bin/docker
+
+    - name: Enable and start Docker
+      systemd:
+        name: docker
+        enabled: true
+        state: started
+
+    # ── Firewall ──────────────────────────────────────────────────────────────
+
+    - name: Allow loopback
+      iptables:
+        chain: INPUT
+        in_interface: lo
+        jump: ACCEPT
+        action: insert
+        rule_num: 1
+
+    - name: Allow established connections
+      iptables:
+        chain: INPUT
+        ctstate: [ESTABLISHED, RELATED]
+        jump: ACCEPT
+        action: insert
+        rule_num: 2
+
+    - name: Allow SSH
+      iptables:
+        chain: INPUT
+        protocol: tcp
+        destination_port: "22"
+        jump: ACCEPT
+        action: insert
+        rule_num: 3
+
+    - name: Allow port 8080 only from VPS1
+      iptables:
+        chain: INPUT
+        protocol: tcp
+        source: "{{ vps1_ip }}"
+        destination_port: "8080"
+        jump: ACCEPT
+        action: insert
+        rule_num: 4
+
+    - name: Drop everything else
+      iptables:
+        chain: INPUT
+        jump: DROP
+
+    - name: Persist firewall rules
+      command: netfilter-persistent save
+
+    # ── Repository ───────────────────────────────────────────────────────────
+
+    - name: Clone incident-copilot repo
+      git:
+        repo: "{{ repo_url }}"
+        dest: "{{ repo_dest }}"
+        version: main
+        force: true
+
+    - name: Create .env from example
+      copy:
+        src: "{{ repo_dest }}/.env.example"
+        dest: "{{ repo_dest }}/.env"
+        remote_src: true
+        force: false
+
+    - name: Configure .env — Ollama host
+      lineinfile:
+        path: "{{ repo_dest }}/.env"
+        regexp: "^OLLAMA_HOST="
+        line: "OLLAMA_HOST=http://ollama:11434"
+
+    - name: Configure .env — ChromaDB host
+      lineinfile:
+        path: "{{ repo_dest }}/.env"
+        regexp: "^CHROMA_HOST="
+        line: "CHROMA_HOST=http://chromadb:8000"
+
+    - name: Configure .env — API bind IP (public)
+      lineinfile:
+        path: "{{ repo_dest }}/.env"
+        regexp: "^API_BIND_IP="
+        line: "API_BIND_IP=0.0.0.0"
+
+    - name: Configure .env — API secret key
+      lineinfile:
+        path: "{{ repo_dest }}/.env"
+        regexp: "^API_SECRET_KEY="
+        line: "API_SECRET_KEY={{ api_secret_key }}"
+
+    # ── Stack ─────────────────────────────────────────────────────────────────
+
+    - name: Start Docker stack
+      community.docker.docker_compose_v2:
+        project_src: "{{ repo_dest }}"
+        files: [docker-compose.prod.yml]
+        state: present
+        build: always
+
+    - name: Pull Ollama models
+      command: docker exec sre-rag-ollama ollama pull {{ item }}
+      loop: "{{ ollama_models }}"
+      register: pull_result
+      retries: 3
+      delay: 10
+      until: pull_result.rc == 0
+
+    - name: Check API health
+      uri:
+        url: http://localhost:8080/health
+        return_content: true
+      register: health
+      retries: 5
+      delay: 10
+      until: health.status == 200
+
+    - name: Print health status
+      debug:
+        msg: "{{ health.content }}"

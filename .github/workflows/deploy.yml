@@ -1,0 +1,43 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run tests
+        run: python -m pytest tests/ -v
+
+  deploy:
+    name: Deploy to VPS2
+    runs-on: ubuntu-latest
+    needs: test
+    environment: production
+
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS2_HOST }}
+          username: root
+          key: ${{ secrets.VPS2_SSH_KEY }}
+          script: |
+            cd /opt/incident-copilot
+            git fetch origin main
+            git reset --hard origin/main
+            docker compose -f docker-compose.prod.yml up -d --build --remove-orphans
+            docker compose -f docker-compose.prod.yml ps

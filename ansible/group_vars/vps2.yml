@@ -1,0 +1,6 @@
+repo_url: https://github.com/kgbunshin/incident-copilot.git
+repo_dest: /opt/incident-copilot
+vps1_ip: "76.13.165.177"
+ollama_models:
+  - nomic-embed-text
+  - mistral:7b-instruct-q4_K_M

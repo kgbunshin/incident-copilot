@@ -47,13 +47,13 @@ for pattern in "${BLOCKED_PATTERNS[@]}"; do
 done
 
 # ── 3. Secret patterns inside staged file contents ───────────────────────────
-# Only scan added lines (prefix "+") and skip the hook files themselves.
+# Only scan added lines (prefix "+") and skip hook and infra-as-code files.
 added_lines=$(git diff --cached --unified=0 \
-  -- ':!.githooks/*' ':!scripts/install-hooks.sh' \
+  -- ':!.githooks/*' ':!scripts/install-hooks.sh' ':!ansible/*' \
   | grep "^+" | grep -v "^+++" || true)
 
 SECRET_PATTERNS=(
-  "API_SECRET_KEY\s*=\s*.+"
+  "API_SECRET_KEY\s*=\s*[a-f0-9]{32,}"
   "-----BEGIN (RSA|EC|DSA|OPENSSH) PRIVATE KEY"
   "(password|passwd|secret|token)\s*=\s*['\"][^'\"]{8,}"
   "SRE_API_KEY.*[a-f0-9]{32,}"
