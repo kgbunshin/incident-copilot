@@ -55,5 +55,5 @@ Grafana                        ├── /ingest/file   (manual upload)
 - Ollama (:11434) and ChromaDB (:8000) bound to localhost only
 - FastAPI (:8080) bound to private Hostinger network only
 - All write endpoints require `X-API-Key` header
-- Alert webhook (`/ingest/alert`) is intentionally unauthenticated for Alertmanager compatibility
+- Alert webhook (`/ingest/alert`) requires `X-API-Key` header (set via Alertmanager `http_config.headers`)
 - Sensitive keys are redacted in JSON log parser before storage

@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-SRE RAG MCP Server — expõe a base de conhecimento como tools para o Claude Code.
+SRE RAG MCP Server — exposes the knowledge base as tools for Claude Code.
 
-Tools disponíveis:
-  sre_query   — consulta RAG com linguagem natural
-  sre_ingest  — ingere texto/runbook/decisão na base vetorial
-  sre_stats   — mostra o que está armazenado
+Available tools:
+  sre_query   — natural language RAG query
+  sre_ingest  — ingest text/runbook/decision into the vector knowledge base
+  sre_stats   — show what is stored in the knowledge base
 """
 import asyncio
 import os
@@ -41,21 +41,21 @@ async def list_tools() -> list[types.Tool]:
         types.Tool(
             name="sre_query",
             description=(
-                "Consulta a base de conhecimento SRE com linguagem natural. "
-                "Retorna resposta gerada pelo LLM com fontes e nível de confiança. "
-                "Use para: diagnosticar incidentes, buscar runbooks, encontrar "
-                "incidentes similares, ou recuperar decisões técnicas passadas."
+                "Query the SRE knowledge base using natural language. "
+                "Returns an LLM-generated answer with sources and confidence score. "
+                "Use to: diagnose incidents, retrieve runbooks, find similar past incidents, "
+                "or look up past technical decisions."
             ),
             inputSchema={
                 "type": "object",
                 "properties": {
                     "question": {
                         "type": "string",
-                        "description": "Pergunta em linguagem natural sobre incidentes, alertas ou infraestrutura.",
+                        "description": "Natural language question about incidents, alerts, or infrastructure.",
                     },
                     "top_k": {
                         "type": "integer",
-                        "description": "Número de chunks de contexto a recuperar (padrão: 5).",
+                        "description": "Number of context chunks to retrieve (default: 5).",
                         "default": 5,
                     },
                 },
@@ -65,21 +65,21 @@ async def list_tools() -> list[types.Tool]:
         types.Tool(
             name="sre_ingest",
             description=(
-                "Ingere texto na base de conhecimento SRE. "
-                "Use para adicionar: runbooks, post-mortems, decisões técnicas, "
-                "notas de incidentes, configurações importantes ou qualquer "
-                "conhecimento operacional que deva ser consultável no futuro."
+                "Ingest text into the SRE knowledge base. "
+                "Use to add: runbooks, post-mortems, technical decisions, "
+                "incident notes, important configurations, or any operational "
+                "knowledge that should be queryable in the future."
             ),
             inputSchema={
                 "type": "object",
                 "properties": {
                     "content": {
                         "type": "string",
-                        "description": "Conteúdo a ser ingerido (markdown, texto livre, JSON).",
+                        "description": "Content to ingest (markdown, plain text, JSON).",
                     },
                     "filename": {
                         "type": "string",
-                        "description": "Nome de referência para o documento (ex: 'runbook-oom.md', 'decisao-embeddings.md').",
+                        "description": "Reference name for the document (e.g. 'runbook-oom.md', 'decision-embeddings.md').",
                     },
                 },
                 "required": ["content", "filename"],
@@ -88,8 +88,8 @@ async def list_tools() -> list[types.Tool]:
         types.Tool(
             name="sre_stats",
             description=(
-                "Retorna estatísticas da base de conhecimento SRE: "
-                "total de chunks armazenados e lista de fontes indexadas."
+                "Returns SRE knowledge base statistics: "
+                "total stored chunks and list of indexed sources."
             ),
             inputSchema={
                 "type": "object",
@@ -117,9 +117,9 @@ async def call_tool(name: str, arguments: dict) -> list[types.TextContent]:
             resp.raise_for_status()
             data = resp.json()
             text = (
-                f"**Resposta:** {data['answer']}\n\n"
-                f"**Fontes:** {', '.join(data['sources']) or 'nenhuma'}\n"
-                f"**Confiança:** {data['confidence']:.0%}"
+                f"**Answer:** {data['answer']}\n\n"
+                f"**Sources:** {', '.join(data['sources']) or 'none'}\n"
+                f"**Confidence:** {data['confidence']:.0%}"
             )
             return [types.TextContent(type="text", text=text)]
 
@@ -128,7 +128,6 @@ async def call_tool(name: str, arguments: dict) -> list[types.TextContent]:
             filename = arguments["filename"]
             import io
             files = {"file": (filename, content.encode(), "text/plain")}
-            # multipart — sem Content-Type no header
             resp = await client.post(
                 f"{API_URL}/ingest/file",
                 headers={"X-API-Key": API_KEY},
@@ -137,8 +136,8 @@ async def call_tool(name: str, arguments: dict) -> list[types.TextContent]:
             resp.raise_for_status()
             data = resp.json()
             text = (
-                f"✅ Ingerido: **{data['source']}** — "
-                f"{data['chunks_stored']} chunks armazenados."
+                f"✅ Ingested: **{data['source']}** — "
+                f"{data['chunks_stored']} chunks stored."
             )
             return [types.TextContent(type="text", text=text)]
 
@@ -146,16 +145,16 @@ async def call_tool(name: str, arguments: dict) -> list[types.TextContent]:
             resp = await client.get(f"{API_URL}/stats", headers=_headers())
             resp.raise_for_status()
             data = resp.json()
-            sources_list = "\n".join(f"  - {s}" for s in data["sources"]) or "  (vazio)"
+            sources_list = "\n".join(f"  - {s}" for s in data["sources"]) or "  (empty)"
             text = (
-                f"**Coleção:** {data['collection']}\n"
-                f"**Total de chunks:** {data['total_chunks']}\n"
-                f"**Fontes indexadas:**\n{sources_list}"
+                f"**Collection:** {data['collection']}\n"
+                f"**Total chunks:** {data['total_chunks']}\n"
+                f"**Indexed sources:**\n{sources_list}"
             )
             return [types.TextContent(type="text", text=text)]
 
         else:
-            return [types.TextContent(type="text", text=f"Tool desconhecida: {name}")]
+            return [types.TextContent(type="text", text=f"Unknown tool: {name}")]
 
 
 async def main():

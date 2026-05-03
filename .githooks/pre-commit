@@ -21,7 +21,7 @@ BLOCKED_FILES=(
 
 for f in "${BLOCKED_FILES[@]}"; do
   if git diff --cached --name-only --diff-filter=ACMR | grep -qxF "$f"; then
-    echo -e "${RED}[BLOCKED]${NC} Arquivo interno/secreto não pode ser commitado: $f"
+    echo -e "${RED}[BLOCKED]${NC} Internal/secret file cannot be committed: $f"
     ERRORS=$((ERRORS + 1))
   fi
 done
@@ -41,7 +41,7 @@ BLOCKED_PATTERNS=(
 for pattern in "${BLOCKED_PATTERNS[@]}"; do
   matches=$(git diff --cached --name-only --diff-filter=ACMR | grep -vFx ".env.example" | grep -iE "$pattern" || true)
   if [[ -n "$matches" ]]; then
-    echo -e "${RED}[BLOCKED]${NC} Arquivo com extensão sensível detectado: $matches"
+    echo -e "${RED}[BLOCKED]${NC} Sensitive file extension detected: $matches"
     ERRORS=$((ERRORS + 1))
   fi
 done
@@ -62,21 +62,21 @@ SECRET_PATTERNS=(
 for pattern in "${SECRET_PATTERNS[@]}"; do
   if echo "$added_lines" | grep -qiP "$pattern" 2>/dev/null || \
      echo "$added_lines" | grep -qiE "$pattern" 2>/dev/null; then
-    echo -e "${RED}[BLOCKED]${NC} Possível secret no conteúdo (padrão: ${pattern:0:40}...)"
+    echo -e "${RED}[BLOCKED]${NC} Possible secret in content (pattern: ${pattern:0:40}...)"
     ERRORS=$((ERRORS + 1))
   fi
 done
 
 # ── 4. Warn on .claude/ directory ────────────────────────────────────────────
 if git diff --cached --name-only | grep -q "^\.claude/"; then
-  echo -e "${YELLOW}[WARN]${NC} Arquivos de .claude/ sendo commitados — verifique se não há secrets."
+  echo -e "${YELLOW}[WARN]${NC} Files from .claude/ are being committed — make sure there are no secrets."
 fi
 
 # ── Result ────────────────────────────────────────────────────────────────────
 if [[ $ERRORS -gt 0 ]]; then
   echo ""
-  echo -e "${RED}Commit bloqueado: $ERRORS problema(s) encontrado(s).${NC}"
-  echo "Remova os arquivos/conteúdos listados e tente novamente."
+  echo -e "${RED}Commit blocked: $ERRORS problem(s) found.${NC}"
+  echo "Remove the listed files/content and try again."
   exit 1
 fi
 
