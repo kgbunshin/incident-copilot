@@ -24,7 +24,7 @@ async def ingest_file(file: UploadFile = File(...)):
     return IngestFileResponse(status="ok", chunks_stored=stored, source=file.filename)
 
 
-@router.post("/alert", response_model=IngestAlertResponse)
+@router.post("/alert", response_model=IngestAlertResponse, dependencies=[Depends(verify_api_key)])
 async def ingest_alert(payload: AlertPayload):
     chunks = await ingest_alert_payload(payload.model_dump())
     if not chunks:
